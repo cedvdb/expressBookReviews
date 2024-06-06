@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 let books = require("./booksdb.js");
 const regd_users = express.Router();
 
-let users = [];
+let users = [{ username: 'Louis1288', password: 'HisPassword' }];
 
 const isValid = (username) => users.every((user) => user.username != username);
 
@@ -44,15 +44,29 @@ regd_users.put("/auth/review/:isbn", (req, res) => {
   const isbn = req.params.isbn;
   const review = req.query.review;
   const username = req.session.authorization.username;
+  if (!books[isbn]) {
+    res.status(404).send('book not found');
+  }
   books[isbn].reviews[username] = review;
-  return res.status(200).send("Success");
+  return res.status(200).send({
+    message: 'Your review was upserted',
+    book: books[isbn]
+  });
 });
 
 // Delete a book review
 regd_users.delete("/auth/review/:isbn", (req, res) => {
   const isbn = req.params.isbn;
   const username = req.session.authorization.username;
+  if (!books[isbn]) {
+    res.status(404).send('book not found');
+  }
   delete books[isbn].reviews[username];
+  return res.status(200).send(JSON.stringify({
+    message: 'Your review was removed',
+    book: books[isbn],
+  }));
+
 });
 
 module.exports.authenticated = regd_users;
