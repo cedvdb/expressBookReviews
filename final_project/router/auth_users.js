@@ -1,6 +1,6 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
-let books = require("./booksdb.js");
+let BooksDatabase = require("./booksdb.js");
 const regd_users = express.Router();
 
 let users = [{ username: 'Louis1288', password: 'HisPassword' }];
@@ -40,31 +40,39 @@ regd_users.post("/login", (req, res) => {
 });
 
 // Add a book review
-regd_users.put("/auth/review/:isbn", (req, res) => {
+regd_users.put("/auth/review/:isbn", async (req, res) => {
   const isbn = req.params.isbn;
   const review = req.query.review;
   const username = req.session.authorization.username;
-  if (!books[isbn]) {
-    res.status(404).json({ error: 'book not found' });
+
+  const book = await BooksDatabase.findBookByIsbn(isbn);
+
+  if (!book) {
+    return res.status(404).json({ error: `book not found for isbn ${isbn}` });
   }
-  books[isbn].reviews[username] = review;
+  const updatedBook = await BooksDatabase.upsertBookReview(isbn, username, review);
   return res.status(200).json({
     message: 'Your review was upserted',
-    book: books[isbn]
+    book: updatedBook
   });
 });
 
 // Delete a book review
-regd_users.delete("/auth/review/:isbn", (req, res) => {
+regd_users.delete("/auth/review/:isbn", async (req, res) => {
   const isbn = req.params.isbn;
   const username = req.session.authorization.username;
-  if (!books[isbn]) {
-    res.status(404).json({ error: 'book not found' });
+
+  const book = await BooksDatabase.findBookByIsbn(isbn);
+
+  if (!book) {
+    return res.status(404).json({ error: 'book not found' });
   }
-  delete books[isbn].reviews[username];
+
+  const updatedBook = await BooksDatabase.removeBookReview(isbn, username);
+
   return res.status(200).json({
     message: 'Your review was removed',
-    book: books[isbn],
+    book: updatedBook,
   });
 
 });
